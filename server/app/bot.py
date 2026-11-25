@@ -13,6 +13,7 @@ from datetime import timedelta
 
 from loguru import logger
 from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
@@ -27,6 +28,7 @@ from pipecat.services.elevenlabs.stt import ElevenLabsRealtimeSTTService
 from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 from pipecat.services.google.llm import GoogleLLMService
 from pipecat.services.llm_service import FunctionCallParams
+from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import TransportParams
 from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
@@ -69,7 +71,8 @@ Caller identity
 Booking
 - Work out the doctor (or speciality), the day, then the time. Always check availability
   before offering times; never invent slots.
-- Ask for the patient's name for the booking; it's optional if they don't want to share it.
+- Once the caller picks a time, ALWAYS ask "May I have the patient's name?" before you
+  ask for the phone number. Pass it as patient_name. Only skip it if they refuse.
 - After booking, confirm doctor, day and time, and give the 4-digit reference.
 
 Cancelling
@@ -90,7 +93,10 @@ async def run_bot(webrtc_connection: SmallWebRTCConnection) -> None:
         params=TransportParams(audio_in_enabled=True, audio_out_enabled=True),
     )
 
-    stt = ElevenLabsRealtimeSTTService(api_key=config.ELEVENLABS_API_KEY)
+    stt = ElevenLabsRealtimeSTTService(
+        api_key=config.ELEVENLABS_API_KEY,
+        settings=ElevenLabsRealtimeSTTService.Settings(language=Language.EN),
+    )
 
     llm = GoogleLLMService(
         api_key=config.GOOGLE_API_KEY,
@@ -114,7 +120,13 @@ async def run_bot(webrtc_connection: SmallWebRTCConnection) -> None:
         context,
         # Silero VAD decides when the caller starts and stops talking. That drives
         # interruptions (barge-in) and tells the realtime STT when to commit text.
-        user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
+        # Less sensitive than the defaults (0.7 / 0.2s / 0.6) so background noise or
+        # echo doesn't count as the caller speaking and cut Maya off mid-sentence.
+        user_params=LLMUserAggregatorParams(
+            vad_analyzer=SileroVADAnalyzer(
+                params=VADParams(confidence=0.8, start_secs=0.35, min_volume=0.7)
+            )
+        ),
     )
 
     pipeline = Pipeline(
@@ -159,9 +171,22 @@ async def run_bot(webrtc_connection: SmallWebRTCConnection) -> None:
             await params.result_callback(result)
 
             if name == "check_doctor_availability" and result.get("ok"):
+                # The day being discussed: the one the caller asked for, or else the
+                # earliest day with free slots. The dashboard jumps to it.
+                day = tools.parse_date(args.get("date"))
+                if day:
+                    focus = day.isoformat()
+                else:
+                    days = [
+                        r["next_available"][0]["iso_date"]
+                        for r in result["results"]
+                        if r.get("next_available")
+                    ]
+                    focus = min(days) if days else None
                 await notify(
                     "availability_checked",
                     doctor_ids=[r["doctor_id"] for r in result["results"]],
+                    date=focus,
                 )
             elif name == "book_appointment" and result.get("ok"):
                 await notify("appointment_booked", appointment=result["appointment"])

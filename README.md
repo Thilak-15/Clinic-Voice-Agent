@@ -9,7 +9,7 @@ A caller talks to **Maya**, the receptionist at a mock clinic. Maya can check a 
 | Voice pipeline | [Pipecat](https://github.com/pipecat-ai/pipecat) 1.17 (Python) |
 | Speech-to-text | ElevenLabs Scribe v2 Realtime (`ElevenLabsRealtimeSTTService`) |
 | Text-to-speech | ElevenLabs Flash v2.5 (`ElevenLabsTTSService`) |
-| **LLM** | **Google Gemini** (`gemini-3.6-flash` by default; set with `GOOGLE_MODEL`) |
+| **LLM** | **Google Gemini 3.5 Flash-Lite** (`gemini-3.5-flash-lite`, free tier; change with `GOOGLE_MODEL`) |
 | VAD | Silero VAD |
 | Transport | WebRTC, browser to server (Pipecat SmallWebRTC, no third-party room service) |
 | Data | SQLite (mock doctors and a rolling 7 days of 30-minute slots) |
@@ -17,7 +17,7 @@ A caller talks to **Maya**, the receptionist at a mock clinic. Maya can check a 
 
 ## Run it
 
-You need Python 3.11–3.13, Node 20+, an ElevenLabs API key and a Google AI Studio API key.
+You need Python 3.11 or newer (tested on 3.13 and 3.14), Node 20+, an ElevenLabs API key and a Google AI Studio API key.
 
 **1. Server**
 
@@ -109,5 +109,5 @@ See `server/.env.example`. Only `ELEVENLABS_API_KEY` and `GOOGLE_API_KEY` are re
 - Slots and doctors are mock data. Use the ↻ button in the top bar (or `POST /api/reset`) to re-seed before a demo.
 - All dates are in clinic time (`Asia/Kolkata`). The prompt includes the next eight dates, so "Friday" or "tomorrow" resolves to an exact date.
 - Phone validation expects Indian 10-digit mobile numbers, with an optional +91 or 0 prefix.
-- For the free Gemini tier, choose any Flash model your key can use in AI Studio and set it as `GOOGLE_MODEL`.
+- I picked Flash-Lite for speed, which matters on a call. If a model returns 503 (high demand), set `GOOGLE_MODEL` to another Flash model your key can use.
 - The browser WebRTC client (`@pipecat-ai/small-webrtc-transport`) loads Daily's media-device helper from its CDN at runtime, so the dashboard needs internet access during a call.

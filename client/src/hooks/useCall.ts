@@ -159,7 +159,9 @@ export function useCall() {
       enableCam: false,
       callbacks: {
         onTrackStarted: (track, participant) => {
-          if (track.kind === 'audio' && participant && !participant.local && audioEl.current) {
+          // SmallWebRTC reports the bot's track without a participant, so play any audio
+          // track that isn't our own microphone.
+          if (track.kind === 'audio' && participant?.local !== true && audioEl.current) {
             audioEl.current.srcObject = new MediaStream([track]);
             void audioEl.current.play().catch(() => {});
           }

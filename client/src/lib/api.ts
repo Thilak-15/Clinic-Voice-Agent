@@ -36,7 +36,7 @@ export type BookingView = {
   status: string;
 };
 export type ServerEvent =
-  | { type: 'availability_checked'; doctor_ids: string[] }
+  | { type: 'availability_checked'; doctor_ids: string[]; date: string | null }
   | { type: 'appointment_booked'; appointment: BookingView }
   | { type: 'appointment_cancelled'; appointment: BookingView }
   | { type: 'tool_started'; tool: string }

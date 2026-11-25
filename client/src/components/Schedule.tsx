@@ -8,7 +8,7 @@ type Props = {
   doctors: Doctor[];
   appointments: Appointment[];
   highlights: Highlights;
-  focusDay: string | null;
+  focusDay: { day: string; seq: number } | null;
   agent: string;
 };
 
@@ -31,7 +31,7 @@ export function Schedule({ doctors, appointments, highlights, focusDay, agent }:
 
   // Jump to the day of a booking/cancellation that just came in.
   useEffect(() => {
-    if (focusDay) setSelected(focusDay);
+    if (focusDay) setSelected(focusDay.day);
   }, [focusDay]);
 
   // Slots whose appointment just changed get a flash.

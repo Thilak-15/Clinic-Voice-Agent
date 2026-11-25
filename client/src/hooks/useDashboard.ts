@@ -22,7 +22,10 @@ export function useDashboard() {
   const [live, setLive] = useState(false);
   const [onCall, setOnCall] = useState(false);
   const [highlights, setHighlights] = useState<Highlights>(empty);
-  const [focusDay, setFocusDay] = useState<string | null>(null);
+  // seq changes on every event, so the schedule jumps even to the same day again.
+  const [focusDay, setFocusDay] = useState<{ day: string; seq: number } | null>(null);
+  const focusSeq = useRef(0);
+  const focus = useCallback((day: string) => setFocusDay({ day, seq: ++focusSeq.current }), []);
   const [error, setError] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
 
@@ -73,6 +76,7 @@ export function useDashboard() {
       const ev = JSON.parse(msg.data) as ServerEvent;
       switch (ev.type) {
         case 'availability_checked':
+          if (ev.date) focus(ev.date);
           flash(
             (h) => ev.doctor_ids.forEach((id) => h.doctors.add(id)),
             (h) => ev.doctor_ids.forEach((id) => h.doctors.delete(id)),
@@ -84,7 +88,7 @@ export function useDashboard() {
           const a = ev.appointment;
           const kind = ev.type === 'appointment_booked' ? 'booked' : 'cancelled';
           void refresh().then(() => {
-            setFocusDay(a.starts_at.slice(0, 10));
+            focus(a.starts_at.slice(0, 10));
             flash(
               (h) => h.appointments.set(a.appointment_id, kind),
               (h) => h.appointments.delete(a.appointment_id),
@@ -112,7 +116,7 @@ export function useDashboard() {
       window.clearInterval(tick);
       timers.current.forEach(window.clearTimeout);
     };
-  }, [refresh, flash]);
+  }, [refresh, flash, focus]);
 
   const reset = useCallback(async () => {
     await api.reset();

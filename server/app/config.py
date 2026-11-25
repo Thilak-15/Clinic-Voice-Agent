@@ -14,7 +14,7 @@ ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID") or "EXAVITQu4vr4xnSDxMaL"
 ELEVENLABS_TTS_MODEL = os.getenv("ELEVENLABS_TTS_MODEL") or "eleven_flash_v2_5"
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
-GOOGLE_MODEL = os.getenv("GOOGLE_MODEL") or "gemini-3.6-flash"
+GOOGLE_MODEL = os.getenv("GOOGLE_MODEL") or "gemini-3.5-flash-lite"
 
 CLINIC_NAME = os.getenv("CLINIC_NAME") or "Sunrise Health Clinic"
 AGENT_NAME = os.getenv("AGENT_NAME") or "Maya"
